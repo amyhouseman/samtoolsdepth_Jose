@@ -1,0 +1,45 @@
+#!/bin/bash --login
+#SBATCH -J AmyHouseman_samtoolsdepth
+#SBATCH -o %x.stdout.%J.%N
+#SBATCH -e %x.stderr.%J.%N
+#SBATCH --ntasks=1
+#SBATCH --ntasks-per-node=1
+#SBATCH -p compute
+#SBATCH --account=scw1581
+#SBATCH --mail-type=ALL          # Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --mail-user=HousemanA@cardiff.ac.uk     # Where to send mail
+#SBATCH --array=1-33
+#SBATCH --time=03:00:00
+
+module purge
+module load singularity
+module load parallel
+
+# Set bash error trapping to exit on first error.
+set -eu
+
+WDPATH=/scratch/$USER/$SLURM_ARRAY_JOB_ID
+CONTAINER_FILE=samtools-1.9.sif
+MY_CONTAINER_PATH=/scratch/$USER/containers
+CONTAINER=$MY_CONTAINER_PATH/$CONTAINER_FILE
+EXOME_IDs_FILE=Polyposis_Exome_Analysis_Novogene/fastp/All_fastp_input/List_of_33_exome_IDs
+EXOMEBEDFILE=/scratch/c.c21087028/Polyposis_Exome_Analysis_Novogene/deepvariant/bed/novogene_agilent_human_region_hg38_recoded.bed
+INPUTBAMFILE=/scratch/c.c21087028/Polyposis_Exome_Analysis_Novogene/samtools/sort/{}PE_samtoolssorted.bam
+SAMTOOLSDEPTHOUTPUTFILE=/scratch/c.c21087028/Polyposis_Exome_Analysis_Novogene/coveragetest/{}samtoolsdepth.txt
+SAMTOOLSDEPTHAWK=/scratch/c.c21087028/Polyposis_Exome_Analysis_Novogene/coveragetest/{}samtoolsdepthawk.txt
+
+if [ "$SLURM_ARRAY_TASK_ID" == "1" ]
+then
+  mkdir -p $MY_CONTAINER_PATH
+  [ -f "$CONTAINER" ] || ssh cl1 wget -O $CONTAINER https://wotan.cardiff.ac.uk/containers/$CONTAINER_FILE
+  mkdir $WDPATH
+fi
+
+while [ ! -d $WDPATH ]
+do
+  sleep 10
+done
+
+cd /scratch/c.c21087028/
+
+sed -n "${SLURM_ARRAY_TASK_ID}p" $EXOME_IDs_FILE | parallel -j 1 "singularity run $CONTAINER depth -b $EXOMEBEDFILE -a $INPUTBAMFILE  > $SAMTOOLSDEPTHOUTPUTFILE | awk '{sum+=$3} END { print "Average = ",sum/NR}' ${}samtoolsdepth.txt > $SAMTOOLSDEPTHAWK"
