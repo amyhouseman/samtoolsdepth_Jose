@@ -42,4 +42,4 @@ done
 
 cd /scratch/c.c21087028/
 
-sed -n "${SLURM_ARRAY_TASK_ID}p" $EXOME_IDs_FILE | parallel -j 1 "singularity run $CONTAINER depth -b $EXOMEBEDFILE -a $INPUTBAMFILE  > $SAMTOOLSDEPTHOUTPUTFILE | awk '{sum+=$3} END { print "Average = ",sum/NR}' $SAMTOOLSDEPTHOUTPUTFILE > $SAMTOOLSDEPTHAWK"
+sed -n "${SLURM_ARRAY_TASK_ID}p" $EXOME_IDs_FILE | parallel -j 1 "singularity run $CONTAINER depth -b $EXOMEBEDFILE -a $INPUTBAMFILE  > $SAMTOOLSDEPTHOUTPUTFILE | awk '{sum+=\$3} END { print \"Average = \",sum/NR}' $SAMTOOLSDEPTHOUTPUTFILE > $SAMTOOLSDEPTHAWK"
